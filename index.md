@@ -1,37 +1,44 @@
-## Welcome to GitHub Pages
+# runit-conversion - Arch Linux without systemd
+**WARNING: Installation currently not possible**
 
-You can use the [editor on GitHub](https://github.com/42LoCo42/runit-conversion/edit/gh-pages/index.md) to maintain and preview the content for your website in Markdown files.
+libeudev conflicts with systemd-libs on libudev.so, I am working on a solution.
 
-Whenever you commit to this repository, GitHub Pages will run [Jekyll](https://jekyllrb.com/) to rebuild the pages in your site, from the content in your Markdown files.
-
-### Markdown
-
-Markdown is a lightweight and easy-to-use syntax for styling your writing. It includes conventions for
-
-```markdown
-Syntax highlighted code block
-
-# Header 1
-## Header 2
-### Header 3
-
-- Bulleted
-- List
-
-1. Numbered
-2. List
-
-**Bold** and _Italic_ and `Code` text
-
-[Link](url) and ![Image](src)
+Installation guide:
 ```
+# We have to force-reboot the machine, so save all your stuff and close as many programs as possible!
+# It is best if you do the following steps from a tty with nothing else running
+# Copying the reboot binary (actually systemctl) and running it after systemd is gone won't work,
+# so if anyone knows a way around this, please open a pull request!
 
-For more details see [GitHub Flavored Markdown](https://guides.github.com/features/mastering-markdown/).
+yay -Rdd base systemd systemd-sysvcompat
+yay -S runit-conversion runit-services eudev shsysusers
 
-### Jekyll Themes
+# this is ugly as sin
+echo e | sudo tee /proc/sysrq-trigger; echo b | sudo tee /proc/sysrq-trigger
+```
+Now enable your required services by symlinking from `/etc/sv/<service>` to `/var/service`
 
-Your Pages site will use the layout and styles from the Jekyll theme you have selected in your [repository settings](https://github.com/42LoCo42/runit-conversion/settings/pages). The name of this theme is saved in the Jekyll `_config.yml` configuration file.
+Two services are active per default: getty-tty1 and udevd.
 
-### Support or Contact
+### elogind
+The PKGBUILD for elogind in the AUR is broken. To use it, apply
+[this](https://gist.github.com/42LoCo42/5007d7a7a7a870742e67b16363b3effb)
+patch, for example like so:
+```bash
+git clone https://aur.archlinux.org/elogind
+cd elogind
+curl -LO https://gist.githubusercontent.com/42LoCo42/5007d7a7a7a870742e67b16363b3effb/raw/20b90e2257603d6649648d7ef7d8c8cfbe826d98/elogind-paths.patch
+patch < elogind-paths.patch
+makepkg -si
+```
+I have [contacted](https://aur.archlinux.org/pkgbase/elogind/#comment-825753) the package maintainer about this issue.
 
-Having trouble with Pages? Check out our [documentation](https://docs.github.com/categories/github-pages-basics/) or [contact support](https://support.github.com/contact) and we’ll help you sort it out.
+### FAQ
+- What are the init scripts (stage 1 & 3)? [kisslinux init](https://github.com/kisslinux/init)
+- How & where to add a boot/shutdown script? `/usr/lib/init/rc.d/<name>.<boot|pre.shutdown|post.shutdown>`
+- How to enable more ttys?
+```bash
+cd /etc/sv
+cp -r getty-tty1 getty-tty<N>
+ln -s /etc/sv/getty-tty<N> /var/service
+```
