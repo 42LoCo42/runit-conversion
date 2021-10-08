@@ -1,0 +1,5 @@
+#!/bin/sh
+exec /usr/bin/runsvdir \
+	-P /var/service \
+	1> /var/log/runsvdir.out \
+	2> /var/log/runsvdir.err
